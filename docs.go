@@ -9,13 +9,12 @@ For a more thorough introduction to the library, please check out [WHY.md](blog_
 ## Examples
 
 Single promise:
-```go
-p := promises.New(func() int {
-  return 1
-})
-var resolved int
-err := p.Wait(&resolved)
-```
+	p := promises.New(func() int {
+		return 1
+	})
+	var resolved int
+	err := p.Wait(&resolved)
+
 
 Chained Promise
 ```go
