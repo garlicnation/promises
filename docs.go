@@ -1,5 +1,3 @@
-package promise
-
 // # promises [![GoDoc](https://img.shields.io/badge/godoc-Reference-brightgreen.svg?style=flat)](http://godoc.org/github.com/garlicnation/promises)
 // Promises is a library that builds something similar to JS style promises, or Futures(as seen in Java and other languages) for golang.
 
@@ -55,3 +53,4 @@ package promise
 // err := p.Wait(&r)
 // // Errors are swallowed by promises and returned by wait.
 // ```
+package promise
