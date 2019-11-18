@@ -1,10 +1,9 @@
 /*
-# promises [![GoDoc](https://img.shields.io/badge/godoc-Reference-brightgreen.svg?style=flat)](http://godoc.org/github.com/garlicnation/promises)
 Promises is a library that builds something similar to JS style promises, or Futures(as seen in Java and other languages) for golang.
 
 Promises is type-safe at runtime, and within an order of magnitude of performance of a solution built with pure channels and goroutines.
 
-For a more thorough introduction to the library, please check out [WHY.md](blog_example/WHY.md)
+For a more thorough introduction to the library, please check out https://github.com/garlicnation/promises/blob/master/blog_example/WHY.md
 
 Examples
 
@@ -40,7 +39,7 @@ Promise.all:
 	results := []int{}
 	err := all.Wait(&results)
 
-Error handling
+Error handling:
 	p := promise.New(http.Get, "http://example.com")
 	// Do other work while Get processes in a goroutine...
 	var r *http.Response
