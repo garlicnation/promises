@@ -6,52 +6,46 @@ Promises is type-safe at runtime, and within an order of magnitude of performanc
 
 For a more thorough introduction to the library, please check out [WHY.md](blog_example/WHY.md)
 
-## Examples
+Examples
 
 Single promise:
-	p := promises.New(func() int {
+	p := promise.New(func() int {
 		return 1
 	})
 	var resolved int
 	err := p.Wait(&resolved)
 
+Chained Promise:
+	p := promise.New(func() int {
+		return 1
+	})
+	timesTwo := p.Then(func(x int) int {
+		return x*2
+	})
+	var resolved int
+	err := timesTwo.Wait(&resolved)
 
-Chained Promise
-```go
-p := promises.New(func() int {
-  return 1
-})
-timesTwo := p.Then(func(x int) int {
-  return x*2
-})
-var resolved int
-err := timesTwo.Wait(&resolved)
-```
+Promise.all:
+	p := promise.New(func() int {
+		return 1
+	})
+	timesTwo := p.Then(func(x int) int {
+		return x * 2
+	})
+	plusFour := timesTwo.Then(func(x int) int{
+		return x + 4
+	})
 
-Promise.all
-```go
-p := promises.New(func() int {
-  return 1
-})
-timesTwo := p.Then(func(x int) int {
-  return x * 2
-})
-plusFour := timesTwo.Then(func(x int) int{
-  return x + 4
-})
-
-all := promises.All(p, timesTwo, plusFour)
-results := []int{}
-err := all.Wait(&results)
-```
+	all := promise.All(p, timesTwo, plusFour)
+	results := []int{}
+	err := all.Wait(&results)
 
 Error handling
-```go
-p := promises.New(http.Get, "http://example.com")
-// Do other work while Get processes in a goroutine...
-var r *http.Response
-err := p.Wait(&r)
-// Errors are swallowed by promises and returned by wait.
-```
+	p := promise.New(http.Get, "http://example.com")
+	// Do other work while Get processes in a goroutine...
+	var r *http.Response
+	err := p.Wait(&r)
+	// Errors are swallowed by promise and returned by wait.
+
 */
 package promise
