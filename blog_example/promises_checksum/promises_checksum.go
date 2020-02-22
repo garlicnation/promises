@@ -4,11 +4,12 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
-	"github.com/garlicnation/promises"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	promise "github.com/garlicnation/promises"
 )
 
 var listOfWebsites = []string{

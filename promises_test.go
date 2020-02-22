@@ -2,9 +2,11 @@ package promise
 
 import (
 	"errors"
-	"github.com/stretchr/testify/require"
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPromiseResolution(t *testing.T) {
@@ -276,4 +278,73 @@ func TestErrorReturnExitsEarly(t *testing.T) {
 	err := all.Wait()
 	close(blocker)
 	require.Error(t, err)
+}
+
+func TestPromiseRaceSucceedsIfOneSucceeds(t *testing.T) {
+	sleepThenPanic := func() string {
+		time.Sleep(100 * time.Millisecond)
+		panic("failed")
+		return ""
+	}
+
+	sleepThenErr := func() (string, error) {
+		time.Sleep(100 * time.Millisecond)
+		return fmt.Errorf("err")
+	}
+
+	success := func() string {
+		return "success"
+	}
+
+	result := Race(New(sleepThenErr), New(sleepThenPanic), New(success))
+	var retval string
+	err := result.Wait(&retval)
+	require.NoError(t, err)
+	require.Equal(t, "sucess", retval)
+}
+
+func TestPromiseRaceFailsIfOneErrors(t *testing.T) {
+	sleepThenPanic := func() string {
+		time.Sleep(100 * time.Millisecond)
+		panic("failed")
+		return ""
+	}
+
+	returnError := func() (string, error) {
+		return fmt.Errorf("err")
+	}
+
+	sleepThenSuccess := func() string {
+		time.Sleep(100 * time.Millisecond)
+		return "success"
+	}
+
+	result := Race(returnError, sleepThenPanic, sleepThenSuccess)
+	var retval string
+	err := result.Wait(&retval)
+	require.NoError(t, err)
+	require.Equal(t, "", retval)
+}
+
+func TestPromiseRaceFailsIfOnePanics(t *testing.T) {
+	justPanic := func() string {
+		panic("failed")
+		return ""
+	}
+
+	sleepThenError := func() (string, error) {
+		time.Sleep(100 * time.Millisecond)
+		return fmt.Errorf("err")
+	}
+
+	sleepThenSuccess := func() string {
+		time.Sleep(100 * time.Millisecond)
+		return "success"
+	}
+
+	result := Race(sleepThenError, sleepThenPanic, sleepThenSuccess)
+	var retval string
+	err := result.Wait(&retval)
+	require.NoError(t, err)
+	require.Equal(t, "", retval)
 }

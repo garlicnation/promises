@@ -1,9 +1,12 @@
 package promise
 
-import "reflect"
-import "sync"
-import "sync/atomic"
-import "github.com/pkg/errors"
+import (
+	"reflect"
+	"sync"
+	"sync/atomic"
+
+	"github.com/pkg/errors"
+)
 
 type promiseType int
 

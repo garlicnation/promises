@@ -1,7 +1,7 @@
 /*
-Promises is a library that builds something similar to JS style promises, or Futures(as seen in Java and other languages) for golang.
+Package promise builds something similar to JS style promises, or Futures(as seen in Java and other languages) for golang.
 
-Promises is type-safe at runtime, and within an order of magnitude of performance of a solution built with pure channels and goroutines.
+promise is type-safe at runtime, and within an order of magnitude of performance of a solution built with pure channels and goroutines.
 
 For a more thorough introduction to the library, please check out https://github.com/garlicnation/promises/blob/master/blog_example/WHY.md
 
