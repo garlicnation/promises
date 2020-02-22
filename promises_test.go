@@ -289,7 +289,7 @@ func TestPromiseRaceSucceedsIfOneSucceeds(t *testing.T) {
 
 	sleepThenErr := func() (string, error) {
 		time.Sleep(100 * time.Millisecond)
-		return fmt.Errorf("err")
+		return "", fmt.Errorf("err")
 	}
 
 	success := func() string {
@@ -300,7 +300,7 @@ func TestPromiseRaceSucceedsIfOneSucceeds(t *testing.T) {
 	var retval string
 	err := result.Wait(&retval)
 	require.NoError(t, err)
-	require.Equal(t, "sucess", retval)
+	require.Equal(t, "success", retval)
 }
 
 func TestPromiseRaceFailsIfOneErrors(t *testing.T) {
@@ -311,7 +311,7 @@ func TestPromiseRaceFailsIfOneErrors(t *testing.T) {
 	}
 
 	returnError := func() (string, error) {
-		return fmt.Errorf("err")
+		return "", fmt.Errorf("err")
 	}
 
 	sleepThenSuccess := func() string {
@@ -319,10 +319,11 @@ func TestPromiseRaceFailsIfOneErrors(t *testing.T) {
 		return "success"
 	}
 
-	result := Race(returnError, sleepThenPanic, sleepThenSuccess)
+	result := Race(New(returnError), New(sleepThenPanic), New(sleepThenSuccess))
 	var retval string
 	err := result.Wait(&retval)
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "err")
 	require.Equal(t, "", retval)
 }
 
@@ -334,7 +335,7 @@ func TestPromiseRaceFailsIfOnePanics(t *testing.T) {
 
 	sleepThenError := func() (string, error) {
 		time.Sleep(100 * time.Millisecond)
-		return fmt.Errorf("err")
+		return "", fmt.Errorf("err")
 	}
 
 	sleepThenSuccess := func() string {
@@ -342,9 +343,10 @@ func TestPromiseRaceFailsIfOnePanics(t *testing.T) {
 		return "success"
 	}
 
-	result := Race(sleepThenError, sleepThenPanic, sleepThenSuccess)
+	result := Race(New(sleepThenError), New(justPanic), New(sleepThenSuccess))
 	var retval string
 	err := result.Wait(&retval)
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed")
 	require.Equal(t, "", retval)
 }

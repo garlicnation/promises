@@ -110,10 +110,10 @@ func All(promises ...*Promise) *Promise {
 
 const anyErrorFormat = "promise %d has an unexpected return type, expected all promises passed to Any to return the same type"
 
-// Any returns a promise that resolves if any of the passed promises
+// Race returns a promise that resolves if any of the passed promises
 // succeed or fails if any of the passed promises panics.
 // All of the supplied promises must be of the same type.
-func Any(promises ...*Promise) *Promise {
+func Race(promises ...*Promise) *Promise {
 	if len(promises) == 0 {
 		return New(empty)
 	}
@@ -142,10 +142,7 @@ func Any(promises ...*Promise) *Promise {
 	}
 
 	// Extract the type
-	p.resultType = []reflect.Type{}
-	for _, prior := range promises {
-		p.resultType = append(p.resultType, prior.resultType...)
-	}
+	p.resultType = firstResultType[:]
 
 	p.counter = int64(1)
 
