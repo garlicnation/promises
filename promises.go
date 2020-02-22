@@ -15,7 +15,7 @@ const (
 	simpleCall
 	thenCall
 	allCall
-	anyCall
+	raceCall
 )
 
 // A Promise represents an asynchronously executing unit of work
@@ -39,7 +39,7 @@ type noCopy struct{}
 func (*noCopy) Lock()   {}
 func (*noCopy) Unlock() {}
 
-func (p *Promise) anyCall(priors []*Promise, index int) (results []reflect.Value) {
+func (p *Promise) raceCall(priors []*Promise, index int) (results []reflect.Value) {
 	prior := priors[index]
 	prior.cond.L.Lock()
 	for !prior.complete {
@@ -138,7 +138,7 @@ func Race(promises ...*Promise) *Promise {
 
 	p := &Promise{
 		cond: sync.Cond{L: &sync.Mutex{}},
-		t:    anyCall,
+		t:    raceCall,
 	}
 
 	// Extract the type
@@ -320,8 +320,8 @@ func (p *Promise) run(functionRv reflect.Value, prior *Promise, priors []*Promis
 		if results == nil {
 			return
 		}
-	case anyCall:
-		results = p.anyCall(priors, index)
+	case raceCall:
+		results = p.raceCall(priors, index)
 	default:
 		panic("unexpected call type")
 	}
