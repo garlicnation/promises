@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	promise "github.com/garlicnation/promises"
+	promise "github.com/garlicnation/promises/v2"
 )
 
 var listOfWebsites = []string{

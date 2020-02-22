@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	promise "github.com/garlicnation/promises"
+	promise "github.com/garlicnation/promises/v2"
 )
 
 var values []int

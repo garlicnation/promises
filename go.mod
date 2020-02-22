@@ -1,4 +1,4 @@
-module github.com/garlicnation/promises
+module github.com/garlicnation/promises/v2
 
 go 1.12
 
