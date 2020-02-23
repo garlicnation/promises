@@ -110,15 +110,6 @@ func (p *Promise) anyCall(priors []*Promise, index int) (results []reflect.Value
 			return nil
 		}
 		panic(AnyErr{Errs: p.anyErrs[:], LastErr: prior.err})
-		size := 0
-		for i := range priors {
-			size += len(priors[i].resultType)
-		}
-		results = make([]reflect.Value, 0, size)
-		for _, completedPromise := range priors {
-			results = append(results, completedPromise.results...)
-		}
-		return results
 	}
 	remaining := atomic.AddInt64(&p.counter, -1)
 	if remaining == 0 {
