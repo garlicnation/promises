@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/garlicnation/promises"
 	"testing"
+
+	promise "github.com/garlicnation/promises/v2"
 )
 
 var values []int

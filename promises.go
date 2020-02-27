@@ -1,17 +1,21 @@
 package promise
 
-import "reflect"
-import "sync"
-import "sync/atomic"
-import "github.com/pkg/errors"
+import (
+	"fmt"
+	"reflect"
+	"sync"
+	"sync/atomic"
+
+	"github.com/pkg/errors"
+)
 
 type promiseType int
 
 const (
-	legacyCall promiseType = iota
-	simpleCall
+	simpleCall promiseType = iota
 	thenCall
 	allCall
+	raceCall
 	anyCall
 )
 
@@ -23,10 +27,12 @@ type Promise struct {
 	functionRv reflect.Value
 	results    []reflect.Value
 	resultType []reflect.Type
+	anyErrs    []error
 	// returnsError is true if the last value returns an error
 	returnsError bool
 	cond         sync.Cond
 	counter      int64
+	errCounter   int64
 	noCopy
 }
 
@@ -36,7 +42,7 @@ type noCopy struct{}
 func (*noCopy) Lock()   {}
 func (*noCopy) Unlock() {}
 
-func (p *Promise) anyCall(priors []*Promise, index int) (results []reflect.Value) {
+func (p *Promise) raceCall(priors []*Promise, index int) (results []reflect.Value) {
 	prior := priors[index]
 	prior.cond.L.Lock()
 	for !prior.complete {
@@ -78,6 +84,40 @@ func (p *Promise) allCall(priors []*Promise, index int) (results []reflect.Value
 	return nil
 }
 
+// AnyErr returns when all promises passed to Any fail
+type AnyErr struct {
+	// Errs contains the error of all passed promises
+	Errs []error
+	// LastErr contains the error of the last promise to fail.
+	LastErr error
+}
+
+func (err *AnyErr) Error() string {
+	return fmt.Sprintf("all %d promises failed. last err=%v", len(err.Errs), err.LastErr)
+}
+
+func (p *Promise) anyCall(priors []*Promise, index int) (results []reflect.Value) {
+	prior := priors[index]
+	prior.cond.L.Lock()
+	for !prior.complete {
+		prior.cond.Wait()
+	}
+	prior.cond.L.Unlock()
+	if prior.err != nil {
+		remaining := atomic.AddInt64(&p.errCounter, -1)
+		p.anyErrs[index] = prior.err
+		if remaining != 0 {
+			return nil
+		}
+		panic(AnyErr{Errs: p.anyErrs[:], LastErr: prior.err})
+	}
+	remaining := atomic.AddInt64(&p.counter, -1)
+	if remaining == 0 {
+		return prior.results[:]
+	}
+	return nil
+}
+
 func empty() {}
 
 // All returns a promise that resolves if all of the passed promises
@@ -107,8 +147,50 @@ func All(promises ...*Promise) *Promise {
 
 const anyErrorFormat = "promise %d has an unexpected return type, expected all promises passed to Any to return the same type"
 
-// Any returns a promise that resolves if any of the passed promises
+// Race returns a promise that resolves if any of the passed promises
 // succeed or fails if any of the passed promises panics.
+// All of the supplied promises must be of the same type.
+func Race(promises ...*Promise) *Promise {
+	if len(promises) == 0 {
+		return New(empty)
+	}
+
+	if len(promises) == 1 {
+		return promises[0]
+	}
+
+	// Check that all the promises have the same return type
+	firstResultType := promises[0].resultType
+	for promiseIdx, promise := range promises[1:] {
+		newResultType := promise.resultType
+		if len(firstResultType) != len(newResultType) {
+			panic(errors.Errorf(anyErrorFormat, promiseIdx))
+		}
+		for index := range firstResultType {
+			if firstResultType[index] != newResultType[index] {
+				panic(errors.Errorf(anyErrorFormat, promiseIdx))
+			}
+		}
+	}
+
+	p := &Promise{
+		cond: sync.Cond{L: &sync.Mutex{}},
+		t:    raceCall,
+	}
+
+	// Extract the type
+	p.resultType = firstResultType[:]
+
+	p.counter = int64(1)
+
+	for i := range promises {
+		go p.run(reflect.Value{}, nil, promises, i, nil)
+	}
+	return p
+}
+
+// Any returns a promise that resolves if any of the passed promises
+// succeed or fails if all of the passed promises panics.
 // All of the supplied promises must be of the same type.
 func Any(promises ...*Promise) *Promise {
 	if len(promises) == 0 {
@@ -134,17 +216,16 @@ func Any(promises ...*Promise) *Promise {
 	}
 
 	p := &Promise{
-		cond: sync.Cond{L: &sync.Mutex{}},
-		t:    anyCall,
+		cond:    sync.Cond{L: &sync.Mutex{}},
+		t:       anyCall,
+		anyErrs: make([]error, len(promises)),
 	}
 
 	// Extract the type
-	p.resultType = []reflect.Type{}
-	for _, prior := range promises {
-		p.resultType = append(p.resultType, prior.resultType...)
-	}
+	p.resultType = firstResultType[:]
 
 	p.counter = int64(1)
+	p.errCounter = int64(len(promises))
 
 	for i := range promises {
 		go p.run(reflect.Value{}, nil, promises, i, nil)
@@ -225,10 +306,10 @@ func (p *Promise) thenCall(prior *Promise, functionRv reflect.Value) []reflect.V
 	if p.err != nil {
 		panic(errors.Wrap(p.err, "error in previous promise"))
 	}
-	results := functionRv.Call(prior.results)
-	if prior.returnsError && prior.err != nil {
+	if prior.err != nil {
 		panic(prior.err)
 	}
+	results := functionRv.Call(prior.results)
 	return results
 }
 
@@ -322,6 +403,11 @@ func (p *Promise) run(functionRv reflect.Value, prior *Promise, priors []*Promis
 		}
 	case anyCall:
 		results = p.anyCall(priors, index)
+		if results == nil {
+			return
+		}
+	case raceCall:
+		results = p.raceCall(priors, index)
 	default:
 		panic("unexpected call type")
 	}
@@ -417,7 +503,7 @@ func (p *Promise) Wait(out ...interface{}) error {
 	p.cond.L.Unlock()
 
 	if p.err != nil {
-		return errors.Wrap(p.err, "panic() during promise execution")
+		return errors.Wrap(p.err, "error during promise execution")
 	}
 
 	var outRvs []reflect.Value
