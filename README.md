@@ -1,4 +1,4 @@
-# promises [![GoDoc](https://img.shields.io/badge/godoc-Reference-brightgreen.svg?style=flat)](http://godoc.org/github.com/garlicnation/promises)
+# promises [![GoDoc](https://img.shields.io/badge/godoc-Reference-brightgreen.svg?style=flat)](http://godoc.org/github.com/garlicnation/promises) [![Go Report Card](https://goreportcard.com/badge/github.com/garlicnation/promises)](https://goreportcard.com/report/github.com/garlicnation/promises)
 Promises is a library that builds something similar to JS style promises, or Futures(as seen in Java and other languages) for golang.
 
 Promises is type-safe at runtime, and within an order of magnitude of performance of a solution built with pure channels and goroutines.
